@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.7.11",
+  "compatibilityLevel": "JAVA_8",
+  "package": "zh.vendetta.heightmaplod.mixin",
+  "refmap": "mixins.heightmaplod.refmap.json",
+  "mixins": [
+    "PLACEHOLDER"
+  ],
+  "client": [],
+  "server": []
+}
