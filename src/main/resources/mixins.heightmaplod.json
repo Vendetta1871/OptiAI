@@ -5,8 +5,11 @@
   "package": "zh.vendetta.heightmaplod.mixin",
   "refmap": "mixins.heightmaplod.refmap.json",
   "mixins": [
-    "MixinRenderGlobal"
+    "MixinRenderChunk",
+    "RenderChunkAccessor",
+    "CompiledChunkAccessor"
   ],
   "client": [],
-  "server": []
+  "server": [],
+  "plugin": "zh.vendetta.heightmaplod.mixin.LODMixinPlugin"
 }
