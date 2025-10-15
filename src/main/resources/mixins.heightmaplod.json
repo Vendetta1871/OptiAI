@@ -5,7 +5,7 @@
   "package": "zh.vendetta.heightmaplod.mixin",
   "refmap": "mixins.heightmaplod.refmap.json",
   "mixins": [
-    "PLACEHOLDER"
+    "MixinRenderGlobal"
   ],
   "client": [],
   "server": []
