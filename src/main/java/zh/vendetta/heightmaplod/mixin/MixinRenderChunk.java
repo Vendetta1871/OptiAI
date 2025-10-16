@@ -1,15 +1,11 @@
 package zh.vendetta.heightmaplod.mixin;
 
-import net.minecraft.block.state.BlockStateBase;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.BlockRendererDispatcher;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.RegionRenderCacheBuilder;
 import net.minecraft.client.renderer.chunk.ChunkCompileTaskGenerator;
 import net.minecraft.client.renderer.chunk.CompiledChunk;
 import net.minecraft.client.renderer.chunk.RenderChunk;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.init.Blocks;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -17,7 +13,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import zh.vendetta.heightmaplod.HeightmapLOD;
 import zh.vendetta.heightmaplod.LODMeshBuilder;
 import net.minecraft.client.renderer.chunk.VisGraph;
 
@@ -54,7 +49,7 @@ public abstract class MixinRenderChunk {
             BufferBuilder builder = cacheBuilder.getWorldRendererByLayer(BlockRenderLayer.SOLID);
 
             ((RenderChunkAccessor) self).preRenderLOD(builder, pos);
-            LODMeshBuilder.buildLODMesh(world, pos, builder, Minecraft.getMinecraft().getBlockRendererDispatcher(), ((RenderChunkAccessor) self).getWorldView());
+            LODMeshBuilder.buildLODMesh(world, pos, builder, Minecraft.getMinecraft().getBlockRendererDispatcher()/*, ((RenderChunkAccessor) self).getWorldView()*/);
 
             ((CompiledChunkAccessor) compiled).setLayersUsed(used);
             ((RenderChunkAccessor) self).postRenderLOD(BlockRenderLayer.SOLID, pos.getX(), pos.getY(), pos.getY(), builder, compiled);

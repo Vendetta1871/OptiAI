@@ -15,9 +15,6 @@ public interface RenderChunkAccessor {
     @Accessor("compiledChunk")
     void setCompiledChunk(CompiledChunk compiled);
 
-    @Accessor("worldView")
-    ChunkCache getWorldView();
-
     @Invoker("preRenderBlocks")
     void preRenderLOD(BufferBuilder bufferBuilderIn, BlockPos pos);
 

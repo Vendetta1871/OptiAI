@@ -53,6 +53,8 @@ dependencies {
     minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2859'
     implementation "org.spongepowered:mixin:0.8.3-SNAPSHOT"
     annotationProcessor 'org.spongepowered:mixin:0.8.3-SNAPSHOT:processor'
+    //runtimeOnly "javax.vecmath:vecmath:1.5.2"
+    //runtimeOnly files("libs/OptiFine_1.12.2_HD_U_G5.jar")
 }
 
 jar {
