@@ -13,4 +13,10 @@ public interface CompiledChunkAccessor {
 
     @Accessor("layersUsed")
     void setLayersUsed(boolean[] used);
+
+    @Accessor("layersStarted")
+    boolean[] getLayersStarted();
+
+    @Accessor("layersStarted")
+    void setLayersStarted(boolean[] layer);
 }

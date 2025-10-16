@@ -1,11 +1,15 @@
 package zh.vendetta.heightmaplod.mixin;
 
+import net.minecraft.block.state.BlockStateBase;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BlockRendererDispatcher;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.RegionRenderCacheBuilder;
 import net.minecraft.client.renderer.chunk.ChunkCompileTaskGenerator;
 import net.minecraft.client.renderer.chunk.CompiledChunk;
 import net.minecraft.client.renderer.chunk.RenderChunk;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.init.Blocks;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -13,7 +17,9 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import zh.vendetta.heightmaplod.HeightmapLOD;
 import zh.vendetta.heightmaplod.LODMeshBuilder;
+import net.minecraft.client.renderer.chunk.VisGraph;
 
 @Mixin(RenderChunk.class)
 public abstract class MixinRenderChunk {
@@ -33,27 +39,30 @@ public abstract class MixinRenderChunk {
         double dz = self.getPosition().getZ() + 8 - camZ;
         double dist = Math.sqrt(dx * dx + dz * dz);
 
-        // Только дальние чанки — дальше 8 чанков (128 блоков)
         if (dist > 128.0) {
+            if (pos.getY() > 0) ci.cancel();
+
             CompiledChunk compiled = new CompiledChunk();
+            ((RenderChunkAccessor)self).setCompiledChunk(compiled);
+            generator.setCompiledChunk(compiled);
 
             boolean[] used = new boolean[BlockRenderLayer.values().length];
             used[BlockRenderLayer.SOLID.ordinal()] = true;
-            ((CompiledChunkAccessor)(Object)compiled).setLayersUsed(used);
+            ((CompiledChunkAccessor) compiled).setLayersStarted(used);
 
-            // Получаем builder для слоя SOLID
-            BufferBuilder builder = generator.getRegionRenderCacheBuilder()
-                    .getWorldRendererByLayer(BlockRenderLayer.SOLID);
+            RegionRenderCacheBuilder cacheBuilder = generator.getRegionRenderCacheBuilder();
+            BufferBuilder builder = cacheBuilder.getWorldRendererByLayer(BlockRenderLayer.SOLID);
 
-            builder.setTranslation(-pos.getX(), -pos.getY(), -pos.getZ());
-            LODMeshBuilder.buildLODMesh(world, pos, builder);
+            ((RenderChunkAccessor) self).preRenderLOD(builder, pos);
+            LODMeshBuilder.buildLODMesh(world, pos, builder, Minecraft.getMinecraft().getBlockRendererDispatcher(), ((RenderChunkAccessor) self).getWorldView());
 
-            // Forge сам создаст VertexBuffer на основе builder
-            ((RenderChunkAccessor)self).setCompiledChunk(compiled);
-            generator.setCompiledChunk(compiled);
-            generator.setStatus(ChunkCompileTaskGenerator.Status.DONE);
+            ((CompiledChunkAccessor) compiled).setLayersUsed(used);
+            ((RenderChunkAccessor) self).postRenderLOD(BlockRenderLayer.SOLID, pos.getX(), pos.getY(), pos.getY(), builder, compiled);
 
-            return;
+            compiled.setVisibility(new VisGraph().computeVisibility());
+            //generator.setStatus(ChunkCompileTaskGenerator.Status.DONE);
+
+            ci.cancel();
         }
     }
 }
