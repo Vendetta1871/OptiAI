@@ -27,7 +27,6 @@ public abstract class MixinRenderChunk {
         World world = mc.world;
         if (world == null || mc.getRenderViewEntity() == null) return;
 
-        // Расстояние от камеры до центра чанка
         double camX = mc.getRenderViewEntity().posX;
         double camZ = mc.getRenderViewEntity().posZ;
         double dx = self.getPosition().getX() + 8 - camX;
@@ -36,7 +35,7 @@ public abstract class MixinRenderChunk {
 
         if (dist > 128.0) {
             if (pos.getY() > 0) ci.cancel();
-
+            // TODO: increment the chunk updates counter
             CompiledChunk compiled = new CompiledChunk();
             ((RenderChunkAccessor)self).setCompiledChunk(compiled);
             generator.setCompiledChunk(compiled);
@@ -49,7 +48,8 @@ public abstract class MixinRenderChunk {
             BufferBuilder builder = cacheBuilder.getWorldRendererByLayer(BlockRenderLayer.SOLID);
 
             ((RenderChunkAccessor) self).preRenderLOD(builder, pos);
-            LODMeshBuilder.buildLODMesh(world, pos, builder, Minecraft.getMinecraft().getBlockRendererDispatcher()/*, ((RenderChunkAccessor) self).getWorldView()*/);
+            if (dist > 256) LODMeshBuilder.buildLODMesh2(world, pos, builder);
+            else LODMeshBuilder.buildLODMesh(world, pos, builder);
 
             ((CompiledChunkAccessor) compiled).setLayersUsed(used);
             ((RenderChunkAccessor) self).postRenderLOD(BlockRenderLayer.SOLID, pos.getX(), pos.getY(), pos.getY(), builder, compiled);
