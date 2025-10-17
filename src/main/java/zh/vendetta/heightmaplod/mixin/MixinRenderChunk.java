@@ -34,8 +34,9 @@ public abstract class MixinRenderChunk {
         double dist = Math.sqrt(dx * dx + dz * dz);
 
         if (dist > 128.0) {
-            if (pos.getY() > 0) ci.cancel();
-            // TODO: increment the chunk updates counter
+            //if (pos.getY() > 0) ci.cancel();
+            ++RenderChunk.renderChunksUpdated;
+
             CompiledChunk compiled = new CompiledChunk();
             ((RenderChunkAccessor)self).setCompiledChunk(compiled);
             generator.setCompiledChunk(compiled);
@@ -48,8 +49,8 @@ public abstract class MixinRenderChunk {
             BufferBuilder builder = cacheBuilder.getWorldRendererByLayer(BlockRenderLayer.SOLID);
 
             ((RenderChunkAccessor) self).preRenderLOD(builder, pos);
-            if (dist > 256) LODMeshBuilder.buildLODMesh2(world, pos, builder);
-            else LODMeshBuilder.buildLODMesh(world, pos, builder);
+            if (dist > 256) LODMeshBuilder.buildLODMesh(world, pos, builder, 4);
+            else LODMeshBuilder.buildLODMesh(world, pos, builder, 2);
 
             ((CompiledChunkAccessor) compiled).setLayersUsed(used);
             ((RenderChunkAccessor) self).postRenderLOD(BlockRenderLayer.SOLID, pos.getX(), pos.getY(), pos.getY(), builder, compiled);
