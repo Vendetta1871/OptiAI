@@ -4,15 +4,20 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockRendererDispatcher;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.IBakedModel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.init.Blocks;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MeshBuilderCache {
-    private static final Map<IBlockState, Integer> blockStateColorCache = new HashMap<>();
+    private static final Map<IBlockState, int[]> blockStateColorCache = new HashMap<>();
 
     private final Long2IntOpenHashMap heightCache = new Long2IntOpenHashMap();
 
@@ -20,13 +25,40 @@ public class MeshBuilderCache {
         heightCache.defaultReturnValue(-1);
     }
 
-    private static int getBlockStateColor(IBlockState state) {
-        int cache = blockStateColorCache.getOrDefault(state, -1);
-        if (cache != -1) return cache;
+    private static TextureAtlasSprite getFaceTexture(IBlockState state, EnumFacing face) {
+        Minecraft mc = Minecraft.getMinecraft();
+        BlockRendererDispatcher dispatcher = mc.getBlockRendererDispatcher();
+        IBakedModel model = dispatcher.getModelForState(state);
 
-        BlockRendererDispatcher dispatcher = Minecraft.getMinecraft().getBlockRendererDispatcher();
-        TextureAtlasSprite sprite = dispatcher.getBlockModelShapes().getTexture(state);
+        List<BakedQuad> quads = model.getQuads(state, face, 0L);
+        TextureAtlasSprite sprite = null;
 
+        if (!quads.isEmpty()) sprite = quads.get(0).getSprite();
+
+        if (sprite == null || sprite == mc.getTextureMapBlocks().getMissingSprite())
+            sprite = dispatcher.getBlockModelShapes().getTexture(state);
+
+        return sprite;
+    }
+
+    private static int EnumFacing2Int(EnumFacing face) {
+        switch (face) {
+            case UP: return 0;
+            case NORTH: return 1;
+            case SOUTH: return 2;
+            case WEST: return 3;
+            case EAST: return 4;
+            case DOWN: return 5;
+        }
+        return -1; // unreachable
+    }
+
+    private static int getBlockStateColor(IBlockState state, EnumFacing face) {
+        int index = EnumFacing2Int(face);
+        int[] cache = blockStateColorCache.getOrDefault(state, new int[]{-1, -1, -1, -1, -1, -1});
+        if (cache[index] != -1) return cache[index];
+
+        TextureAtlasSprite sprite = getFaceTexture(state, face);
         if (sprite.getFrameCount() == 0) return 0xFFFFFFFF;
 
         int count = 0;
@@ -56,19 +88,22 @@ public class MeshBuilderCache {
         int g = (int)(y - 0.344136f * (cb - 128f) - 0.714136f * (cr - 128f));
         int b = (int)(y + 1.772f * (cb - 128f));
 
-        int color = (r << 16) | (g << 8) | b;
-        blockStateColorCache.put(state, color);
-        return color;
+        cache[index] = (r << 16) | (g << 8) | b;
+        blockStateColorCache.put(state, cache);
+        return cache[index];
     }
 
-    private static int getBlockColor(World world, int x, int z) {
+    private static int getBlockColor(World world, int x, int z, EnumFacing face) {
         BlockPos pos = new BlockPos(x, world.getHeight(x, z) - 1, z);
         IBlockState state = world.getBlockState(pos);
 
-        int color = getBlockStateColor(state);
-        int biomeColor = Minecraft.getMinecraft().getBlockColors().colorMultiplier(state, world, pos, 0);
+        // individual check for grass because it's sides has green color
+        boolean isGrassSide = state.getBlock() == Blocks.GRASS && face != EnumFacing.UP;
+        if (isGrassSide) face = EnumFacing.DOWN;
 
-        if (biomeColor == -1) return color;
+        int color = getBlockStateColor(state, face);
+        int biomeColor = Minecraft.getMinecraft().getBlockColors().colorMultiplier(state, world, pos, 0);
+        if (biomeColor == -1 || isGrassSide) return color;
 
         int r = ((color >> 16) & 0xFF) * ((biomeColor >> 16) & 0xFF) / 255;
         int g = ((color >> 8) & 0xFF) * ((biomeColor >> 8) & 0xFF) / 255;
@@ -77,11 +112,11 @@ public class MeshBuilderCache {
         return (r << 16) | (g << 8) | b;
     }
 
-    public float[] colormap(World world, int x, int z, int i) {
+    public float[] colormap(World world, int x, int z, EnumFacing face, int i) {
         float r = 0, g = 0, b = 0;
         for (int ix = x; ix < x + i; ++ix) {
             for (int iz = z; iz < z + i; ++iz) {
-                int color = getBlockColor(world, ix, iz);
+                int color = getBlockColor(world, ix, iz, face);
                 r += (color >> 16) & 0xFF;
                 g += (color >> 8) & 0xFF;
                 b += color & 0xFF;
