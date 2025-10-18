@@ -10,8 +10,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
 
+import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,8 +114,8 @@ public class MeshBuilderCache {
         return (r << 16) | (g << 8) | b;
     }
 
-    public float[] colormap(World world, int x, int z, EnumFacing face, int i) {
-        float r = 0, g = 0, b = 0;
+    public int colormap(World world, int x, int z, EnumFacing face, int i) {
+        int r = 0, g = 0, b = 0;
         for (int ix = x; ix < x + i; ++ix) {
             for (int iz = z; iz < z + i; ++iz) {
                 int color = getBlockColor(world, ix, iz, face);
@@ -122,12 +124,14 @@ public class MeshBuilderCache {
                 b += color & 0xFF;
             }
         }
-        float s = i * i * 255f;
-        return new float[]{r / s, g / s, b / s};
+        i *= i;
+        return (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) ?
+                 (r / i) | ((g / i) << 8) | ((b / i) << 16) | (0xFF << 24) :
+                ((r / i) << 24) | ((g / i) << 16) | ((b / i) << 8) | 0xFF;
     }
 
     public int heightmap(World world, int x, int z, int i) {
-        long key = ((long) x << 32) | (z & 0xFFFFFFFFL);
+        long key = ChunkPos.asLong(x, z);
         int cache = heightCache.get(key);
         if (cache != -1) return cache;
 

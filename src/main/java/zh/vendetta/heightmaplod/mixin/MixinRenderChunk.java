@@ -34,7 +34,7 @@ public abstract class MixinRenderChunk {
         double dist = Math.sqrt(dx * dx + dz * dz);
 
         if (dist > 128.0) {
-            //if (pos.getY() > 0) ci.cancel();
+            if (pos.getY() > 0) ci.cancel();
             ++RenderChunk.renderChunksUpdated;
 
             CompiledChunk compiled = new CompiledChunk();
@@ -49,14 +49,15 @@ public abstract class MixinRenderChunk {
             BufferBuilder builder = cacheBuilder.getWorldRendererByLayer(BlockRenderLayer.SOLID);
 
             ((RenderChunkAccessor) self).preRenderLOD(builder, pos);
-            if (dist > 256) LODMeshBuilder.buildLODMesh(world, pos, builder, 4);
-            else LODMeshBuilder.buildLODMesh(world, pos, builder, 2);
+            //if (dist > 512) LODMeshBuilder.buildLODMesh(world, pos, builder, 8);
+            if (dist > 384) LODMeshBuilder.buildLODMesh(world, pos, builder, 4);
+            else if (dist > 192) LODMeshBuilder.buildLODMesh(world, pos, builder, 2);
+            else LODMeshBuilder.buildLODMesh(world, pos, builder, 1);
 
             ((CompiledChunkAccessor) compiled).setLayersUsed(used);
             ((RenderChunkAccessor) self).postRenderLOD(BlockRenderLayer.SOLID, pos.getX(), pos.getY(), pos.getY(), builder, compiled);
 
             compiled.setVisibility(new VisGraph().computeVisibility());
-            //generator.setStatus(ChunkCompileTaskGenerator.Status.DONE);
 
             ci.cancel();
         }

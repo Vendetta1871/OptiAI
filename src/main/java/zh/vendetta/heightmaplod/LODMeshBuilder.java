@@ -13,10 +13,10 @@ import net.minecraft.world.World;
 
 public class LODMeshBuilder {
 
-    private static float u0;
-    private static float u1;
-    private static float v0;
-    private static float v1;
+    private static int u0;
+    private static int u1;
+    private static int v0;
+    private static int v1;
 
     private static boolean isInitialized = false;
 
@@ -33,10 +33,10 @@ public class LODMeshBuilder {
                 .getModelForState(state)
                 .getParticleTexture();
 
-        u0 = sprite.getMinU();
-        u1 = sprite.getMaxU();
-        v0 = sprite.getMinV();
-        v1 = sprite.getMaxV();
+        u0 = Float.floatToRawIntBits(sprite.getMinU());
+        u1 = Float.floatToRawIntBits(sprite.getMaxU());
+        v0 = Float.floatToRawIntBits(sprite.getMinV());
+        v1 = Float.floatToRawIntBits(sprite.getMaxV());
     }
 
     public static void buildLODMesh(World world, BlockPos chunkPos, BufferBuilder builder, int i) {
@@ -56,31 +56,19 @@ public class LODMeshBuilder {
                 float height = (float) cache.heightmap(world, worldX, worldZ, i);
                 if (height < chunkPos.getY() || height > chunkPos.getY() + 15) continue;
 
-                float[] upcolor = cache.colormap(world, worldX, worldZ, EnumFacing.UP, i);
-                float[] northcolor = cache.colormap(world, worldX, worldZ, EnumFacing.NORTH, i);
-                float[] southcolor = cache.colormap(world, worldX, worldZ, EnumFacing.SOUTH, i);
-                float[] westcolor = cache.colormap(world, worldX, worldZ, EnumFacing.WEST, i);
-                float[] eastcolor = cache.colormap(world, worldX, worldZ, EnumFacing.EAST, i);
-
-                int ltop = cache.lightmap(world, worldX, worldZ, i);
-                int lsouth = (int) (ltop * 0.9f), lnorth = lsouth + 1 - 1; // +1-1 to remove the IntelliJ warning
-                int least = (int) (ltop * 0.8f), lwest = least + 1 - 1;
-
                 // UP FACE
 
-                int[] vertexData = new int[] {
-                        Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v0), 0,
-                        Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v0), 0,
-                        Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v1), 0,
-                        Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v1), 0
+                int upcolor = cache.colormap(world, worldX, worldZ, EnumFacing.UP, i);
+                int lup = cache.lightmap(world, worldX, worldZ, i);
+
+                int[] vertexData = new int[]{
+                        Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), upcolor, u0, v0, lup,
+                        Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), upcolor, u1, v0, lup,
+                        Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), upcolor, u1, v1, lup,
+                        Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), upcolor, u0, v1, lup
                 };
 
                 builder.addVertexData(vertexData);
-                builder.putBrightness4(ltop, ltop, ltop, ltop);
-                builder.putColorMultiplier(upcolor[0], upcolor[1], upcolor[2], 4);
-                builder.putColorMultiplier(upcolor[0], upcolor[1], upcolor[2], 3);
-                builder.putColorMultiplier(upcolor[0], upcolor[1], upcolor[2], 2);
-                builder.putColorMultiplier(upcolor[0], upcolor[1], upcolor[2], 1);
                 builder.putPosition(worldX, height, worldZ);
 
                 // NORTH FACE
@@ -89,19 +77,17 @@ public class LODMeshBuilder {
                 if (i == 1 && z == 0) dh1 = height; // temporary fix for connection between vanilla render and LOD
 
                 if (dh1 > 0) {
-                    int[] vertexData1 = new int[]{
-                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v0), 0,
-                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v0), 0,
-                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f - dh1), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v1), 0,
-                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f - dh1), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v1), 0
+                    int northcolor = cache.colormap(world, worldX, worldZ, EnumFacing.NORTH, i);
+                    int lnorth = (int) (lup * 0.9f);
+
+                    vertexData = new int[]{
+                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), northcolor, u0, v0, lnorth,
+                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), northcolor, u1, v0, lnorth,
+                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f - dh1), Float.floatToRawIntBits(0f), northcolor, u1, v1, lnorth,
+                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f - dh1), Float.floatToRawIntBits(0f), northcolor, u0, v1, lnorth
                     };
 
-                    builder.addVertexData(vertexData1);
-                    builder.putBrightness4(lnorth, lnorth, lnorth, lnorth);
-                    builder.putColorMultiplier(northcolor[0], northcolor[1], northcolor[2], 4);
-                    builder.putColorMultiplier(northcolor[0], northcolor[1], northcolor[2], 3);
-                    builder.putColorMultiplier(northcolor[0], northcolor[1], northcolor[2], 2);
-                    builder.putColorMultiplier(northcolor[0], northcolor[1], northcolor[2], 1);
+                    builder.addVertexData(vertexData);
                     builder.putPosition(worldX, height, worldZ);
                 }
 
@@ -111,19 +97,17 @@ public class LODMeshBuilder {
                 if (i == 1 && z == 15) dh2 = height; // temporary fix for connection between vanilla render and LOD
 
                 if (dh2 > 0) {
-                    int[] vertexData1 = new int[]{
-                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f - dh2), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v0), 0,
-                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f - dh2), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v0), 0,
-                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v1), 0,
-                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v1), 0
+                    int southcolor = cache.colormap(world, worldX, worldZ, EnumFacing.SOUTH, i);
+                    int lsouth = (int) (lup * 0.9f);
+
+                    vertexData = new int[]{
+                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f - dh2), Float.floatToRawIntBits(fi), southcolor, u0, v0, lsouth,
+                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f - dh2), Float.floatToRawIntBits(fi), southcolor, u1, v0, lsouth,
+                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), southcolor, u1, v1, lsouth,
+                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), southcolor, u0, v1, lsouth
                     };
 
-                    builder.addVertexData(vertexData1);
-                    builder.putBrightness4(lsouth, lsouth, lsouth, lsouth);
-                    builder.putColorMultiplier(southcolor[0], southcolor[1], southcolor[2], 4);
-                    builder.putColorMultiplier(southcolor[0], southcolor[1], southcolor[2], 3);
-                    builder.putColorMultiplier(southcolor[0], southcolor[1], southcolor[2], 2);
-                    builder.putColorMultiplier(southcolor[0], southcolor[1], southcolor[2], 1);
+                    builder.addVertexData(vertexData);
                     builder.putPosition(worldX, height, worldZ);
                 }
 
@@ -133,19 +117,17 @@ public class LODMeshBuilder {
                 if (i == 1 && x == 0) dh3 = height; // temporary fix for connection between vanilla render and LOD
 
                 if (dh3 > 0) {
-                    int[] vertexData1 = new int[]{
-                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f - dh3), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v0), 0,
-                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f - dh3), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v0), 0,
-                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v1), 0,
-                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v1), 0
+                    int westcolor = cache.colormap(world, worldX, worldZ, EnumFacing.WEST, i);
+                    int lwest = (int) (lup * 0.8f);
+
+                    vertexData = new int[]{
+                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f - dh3), Float.floatToRawIntBits(0f), westcolor, u0, v0, lwest,
+                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f - dh3), Float.floatToRawIntBits(fi), westcolor, u1, v0, lwest,
+                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), westcolor, u1, v1, lwest,
+                            Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), westcolor, u0, v1, lwest
                     };
 
-                    builder.addVertexData(vertexData1);
-                    builder.putBrightness4(lwest, lwest, lwest, lwest);
-                    builder.putColorMultiplier(westcolor[0], westcolor[1], westcolor[2], 4);
-                    builder.putColorMultiplier(westcolor[0], westcolor[1], westcolor[2], 3);
-                    builder.putColorMultiplier(westcolor[0], westcolor[1], westcolor[2], 2);
-                    builder.putColorMultiplier(westcolor[0], westcolor[1], westcolor[2], 1);
+                    builder.addVertexData(vertexData);
                     builder.putPosition(worldX, height, worldZ);
                 }
 
@@ -155,19 +137,17 @@ public class LODMeshBuilder {
                 if (i == 1 && x == 15) dh4 = height; // temporary fix for connection between vanilla render and LOD
 
                 if (dh4 > 0) {
-                    int[] vertexData1 = new int[]{
-                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v0), 0,
-                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v0), 0,
-                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f - dh4), Float.floatToRawIntBits(fi), 0xFFFFFFFF, Float.floatToRawIntBits(u1), Float.floatToRawIntBits(v1), 0,
-                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f - dh4), Float.floatToRawIntBits(0f), 0xFFFFFFFF, Float.floatToRawIntBits(u0), Float.floatToRawIntBits(v1), 0
+                    int eastcolor = cache.colormap(world, worldX, worldZ, EnumFacing.EAST, i);
+                    int least = (int) (lup * 0.8f);
+
+                    vertexData = new int[]{
+                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(0f), eastcolor, u0, v0, least,
+                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f), Float.floatToRawIntBits(fi), eastcolor, u1, v0, least,
+                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f - dh4), Float.floatToRawIntBits(fi), eastcolor, u1, v1, least,
+                            Float.floatToRawIntBits(fi), Float.floatToRawIntBits(0f - dh4), Float.floatToRawIntBits(0f), eastcolor, u0, v1, least
                     };
 
-                    builder.addVertexData(vertexData1);
-                    builder.putBrightness4(least, least, least, least);
-                    builder.putColorMultiplier(eastcolor[0], eastcolor[1], eastcolor[2], 4);
-                    builder.putColorMultiplier(eastcolor[0], eastcolor[1], eastcolor[2], 3);
-                    builder.putColorMultiplier(eastcolor[0], eastcolor[1], eastcolor[2], 2);
-                    builder.putColorMultiplier(eastcolor[0], eastcolor[1], eastcolor[2], 1);
+                    builder.addVertexData(vertexData);
                     builder.putPosition(worldX, height, worldZ);
                 }
             }
