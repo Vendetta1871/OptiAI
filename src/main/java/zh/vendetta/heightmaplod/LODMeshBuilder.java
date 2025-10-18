@@ -25,7 +25,7 @@ public class LODMeshBuilder {
 
         Minecraft mc = Minecraft.getMinecraft();
 
-        IBlockState state = Blocks.WOOL.getDefaultState()
+        IBlockState state = Blocks.STAINED_GLASS.getDefaultState()
                 .withProperty(BlockColored.COLOR, EnumDyeColor.WHITE);
 
         TextureAtlasSprite sprite = mc.getBlockRendererDispatcher()
@@ -38,88 +38,10 @@ public class LODMeshBuilder {
         v1 = sprite.getMaxV();
     }
 
-    public static int getBlockStateColor(IBlockState state) {
-        Minecraft mc = Minecraft.getMinecraft();
-        TextureAtlasSprite sprite = mc.getBlockRendererDispatcher().getBlockModelShapes().getTexture(state);
-
-        if (sprite.getFrameCount() == 0) return 0xFFFFFFFF;
-
-        int[] pixels = sprite.getFrameTextureData(0)[0];
-        int r = 0, g = 0, b = 0;
-        int count = 0;
-
-        for (int argb : pixels) {
-            int a = (argb >> 24) & 0xFF;
-            if (a < 128) continue;
-
-            r += (argb >> 16) & 0xFF;
-            g += (argb >> 8) & 0xFF;
-            b += argb & 0xFF;
-            count++;
-        }
-
-        if (count == 0) return 0xFFFFFFFF;
-
-        r /= count;
-        g /= count;
-        b /= count;
-
-        return (r << 16) | (g << 8) | b;
-    }
-
-    public static int getBlockColor(World world, int x, int z) {
-        BlockPos pos = new BlockPos(x, world.getHeight(x, z) - 1, z);
-        IBlockState state = world.getBlockState(pos);
-
-        int color = getBlockStateColor(state);
-        int biomeColor = Minecraft.getMinecraft().getBlockColors().colorMultiplier(state, world, pos, 0);
-
-        if (biomeColor == -1) return color;
-
-        int r = ((color >> 16) & 0xFF) * ((biomeColor >> 16) & 0xFF) / 255;
-        int g = ((color >> 8) & 0xFF) * ((biomeColor >> 8) & 0xFF) / 255;
-        int b = (color & 0xFF) * (biomeColor & 0xFF) / 255;
-
-        return (r << 16) | (g << 8) | b;
-    }
-
-    private static float[] colormap(World world, int x, int z, int i) {
-        float r = 0, g = 0, b = 0;
-        for (int ix = x; ix < x + i; ++ix) {
-            for (int iz = z; iz < z + i; ++iz) {
-                int color = getBlockColor(world, ix, iz);
-                r += (color >> 16) & 0xFF;
-                g += (color >> 8) & 0xFF;
-                b += color & 0xFF;
-            }
-        }
-        float s = i * i * 255f;
-        return new float[]{r / s, g / s, b / s};
-    }
-
-    private static int heightmap(World world, int x, int z, int i) {
-        int height = 0;
-        for (int ix = x; ix < x + i; ++ix) {
-            for (int iz = z; iz < z + i; ++iz) {
-                height += world.getHeight(ix, iz);
-            }
-        }
-        return height / i / i;
-    }
-
-    private static int lightmap(World world, int x, int z, int i) {
-        int max = 0;
-        for (int ix = x; ix < x + i; ++ix) {
-            for (int iz = z; iz < z + i; ++iz) {
-                int b = world.getCombinedLight(new BlockPos(ix, world.getHeight(ix, iz), iz), 0);
-                if (b > max) max = b;
-            }
-        }
-        return max;
-    }
-
     public static void buildLODMesh(World world, BlockPos chunkPos, BufferBuilder builder, int i) {
         initialize();
+
+        MeshBuilderCache cache = new MeshBuilderCache();
 
         int baseX = chunkPos.getX();
         int baseZ = chunkPos.getZ();
@@ -132,12 +54,12 @@ public class LODMeshBuilder {
                 int worldX = baseX + x;
                 int worldZ = baseZ + z;
 
-                float height = (float) heightmap(world, worldX, worldZ, i);
+                float height = (float) cache.heightmap(world, worldX, worldZ, i);
                 if (height < chunkPos.getY() || height > chunkPos.getY() + 15) continue;
 
-                float[] color = colormap(world, worldX, worldZ, i);
+                float[] color = cache.colormap(world, worldX, worldZ, i);
 
-                int ltop = lightmap(world, worldX, worldZ, i);
+                int ltop = cache.lightmap(world, worldX, worldZ, i);
                 int lsouth = (int) (ltop * 0.9f), lnorth = lsouth + 1 - 1; // +1-1 to remove the IntelliJ warning
                 int least = (int) (ltop * 0.8f), lwest = least + 1 - 1;
 
@@ -160,7 +82,7 @@ public class LODMeshBuilder {
 
                 // NORTH FACE
 
-                float dh1 = (float) (heightmap(world, worldX, worldZ, i) - heightmap(world, worldX, worldZ - i, i));
+                float dh1 = (float) (cache.heightmap(world, worldX, worldZ, i) - cache.heightmap(world, worldX, worldZ - i, i));
 
                 if (dh1 > 0) {
                     int[] vertexData1 = new int[]{
@@ -181,7 +103,7 @@ public class LODMeshBuilder {
 
                 // SOUTH FACE
 
-                float dh2 = (float) (heightmap(world, worldX, worldZ, i) - heightmap(world, worldX, worldZ + i, i));
+                float dh2 = (float) (cache.heightmap(world, worldX, worldZ, i) - cache.heightmap(world, worldX, worldZ + i, i));
 
                 if (dh2 > 0) {
                     int[] vertexData1 = new int[]{
@@ -202,7 +124,7 @@ public class LODMeshBuilder {
 
                 // WEST FACE
 
-                float dh3 = (float) (heightmap(world, worldX, worldZ, i) - heightmap(world, worldX - i, worldZ, i));
+                float dh3 = (float) (cache.heightmap(world, worldX, worldZ, i) - cache.heightmap(world, worldX - i, worldZ, i));
 
                 if (dh3 > 0) {
                     int[] vertexData1 = new int[]{
@@ -223,7 +145,7 @@ public class LODMeshBuilder {
 
                 // EAST FACE
 
-                float dh4 = (float) (heightmap(world, worldX, worldZ, i) - heightmap(world, worldX + i, worldZ, i));
+                float dh4 = (float) (cache.heightmap(world, worldX, worldZ, i) - cache.heightmap(world, worldX + i, worldZ, i));
 
                 if (dh4 > 0) {
                     int[] vertexData1 = new int[]{
